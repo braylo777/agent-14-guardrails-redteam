@@ -78,3 +78,18 @@ Cloudflare Workers · Workers AI (Llama 3.3 70B) · rule-based guards · vanilla
 
 ## License
 MIT
+
+## How to run
+
+```bash
+npm install   # dev deps only
+npm test      # 13 offline tests, no Workers AI calls
+npm run dev   # local wrangler dev
+```
+
+## Test results (2026-10-27)
+
+| Suite | Tests | Status |
+|---|---|---|
+| Unit + edge cases (test/edge.test.js added) | 9→13 | all pass |
+| Live demo https://agent-14-guardrails-redteam.braylo777.workers.dev | HTTP 200 | verified 2026-10-27 |
