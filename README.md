@@ -36,7 +36,7 @@ flowchart LR
 
 ## Eval results
 ### Offline input-guard eval (no Workers AI) — measured
-Run: `node evals/run-guards.mjs`. Raw output in [`evals/results.json`](evals/results.json).
+Run: `python3 evals/run_guards.py`. Raw output in [`evals/results.json`](evals/results.json).
 
 | Metric | Result | Definition |
 |---|---|---|
@@ -52,44 +52,33 @@ The single miss is an exfiltration prompt that asked for a markdown image withou
 Needs the free daily neuron quota (resets ~7 PM CT Oct 28). Rerun:
 
 ```bash
-BASE=https://agent-14-guardrails-redteam.braylo777.workers.dev node evals/run-live.mjs
+BASE=https://agent-14-guardrails-redteam.braylo777.workers.dev python3 evals/run_live.py
 ```
 
 That script calls `/api/chat` twice per case (guards off, then on), throttled to 5 req/min, and writes `evals/results-live.json` with ASR without guards, ASR with guards, block rate and FPR against the live model.
 
 ## Tests
-9 offline unit tests (`node:test`): per-family input coverage ≥80%, zero FPR on the labelled benign set, output-guard canary/secret/PII/exfil, short-circuit before the model, canary leak with guards off, output block with guards on, HTTP validation and chat block.
+Python: 6 test functions; Rust: 2 test functions (model mocked): per-family input coverage >= 80%, zero false positives on the labelled benign set, output-guard signals, input-block short-circuit before the model, canary detection with guards off, HTTP validation and the rate-limit order. The old JavaScript, the Python and the Rust code give identical verdicts and rule ids on 113 input strings (cases, Unicode tricks, fullwidth letters, zero-width characters) and 15 output strings.
 
 ```bash
-npm test
+python3 -m pytest
+cd worker && cargo test
 ```
 
 ## Run it
 ```bash
-npm install
-npm test
-node evals/run-guards.mjs   # offline, no model
-npx wrangler deploy         # free tier
-node evals/run-live.mjs     # needs Workers AI quota
+python3 -m pytest                       # Python tests
+cd worker && cargo test                 # Rust tests
+cd worker && worker-build --release     # build the Worker (wasm)
+python3 evals/run_guards.py             # offline, no model
+wrangler deploy                         # free tier
+python3 evals/run_live.py               # needs Workers AI quota
 ```
 
+The previous JavaScript version is on the `legacy-js` branch and the `pre-pycrust` tag.
+
 ## Stack
-Cloudflare Workers · Workers AI (Llama 3.3 70B) · rule-based guards · vanilla JS · node:test
+Cloudflare Workers (Rust, workers-rs) · Workers AI (Llama 3.3 70B) · rule-based guards · Python (pytest)
 
 ## License
 MIT
-
-## How to run
-
-```bash
-npm install   # dev deps only
-npm test      # 13 offline tests, no Workers AI calls
-npm run dev   # local wrangler dev
-```
-
-## Test results (2026-10-27)
-
-| Suite | Tests | Status |
-|---|---|---|
-| Unit + edge cases (test/edge.test.js added) | 9→13 | all pass |
-| Live demo https://agent-14-guardrails-redteam.braylo777.workers.dev | HTTP 200 | verified 2026-10-27 |
